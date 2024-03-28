@@ -1,0 +1,122 @@
+
+video {
+        display: block;
+        /* margin: auto; */
+        height: 100%;
+        object-fit: cover;
+        padding: 0;
+        width: 100%;
+}
+  
+
+canvas{
+    display: none;
+    
+    background-color: #ccc;
+}
+.chat-view{
+    display: flex;
+    padding: 10px 20px;
+    justify-content: space-around;
+}
+.chat-box{
+    grid-area: camerabox;
+    border: var(--area-border);
+    display: block;
+    border-radius: 5px;
+    position: relative;
+    overflow: auto;
+    margin-bottom: 20px;
+}
+.video-space{
+    width: 62%;
+    margin-right: 20px;
+}
+.message-space{
+    width: 28%;
+    padding: 18px 9px;
+    border-radius: 8px;
+    background: var(--area-bg-color);
+   
+}
+
+video.local-user {
+    width: 120px;
+    height: 90px;
+    position: absolute;
+    top: 1rem;
+    z-index: 1;
+    left: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    box-shadow: 0 0 4px black;
+}
+
+.calling-tools{
+    margin: auto;
+    display: flex;
+    align-items: center;
+    background: var(--area-bg-color);
+    padding: 5px 10px;
+    border-radius: 5px;
+    justify-content: space-evenly;
+}
+span.icon-span {
+    background: var(--app-bg-color);
+    padding: 7px;
+    cursor: pointer;
+    margin-right: 1em;
+    border-radius: 4px;
+}
+.calling-setting {
+   
+    padding-right: 20px;
+    display: flex;
+}
+.split{
+    height: 1rem;
+    border-right: 2px solid var(--app-bg-color);
+}
+
+.calling-action {
+    display: flex;
+    width: 30%;
+    padding: 7px;
+    align-items: center;
+    border-radius: 4px;
+    justify-content: space-around;
+    background-color: var(--app-bg-color);
+}
+.tools{
+    display: flex;
+    
+    flex-wrap: wrap;
+    /* margin: auto; */
+}
+.number {
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    margin-top: 1em;
+}
+.number-input{
+        width: 60%;
+        border-radius: unset;
+        border-bottom: 2px solid lightslategrey !important;
+        border: none;
+}
+.number-input:hover,.number-input:focus{
+    border: none;
+}
+.calling-action .icon{
+    width: 3em;
+    height: 1.5em;
+}
+.remote-user{
+    height: 50vh;
+}
+
+.flex-between{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}

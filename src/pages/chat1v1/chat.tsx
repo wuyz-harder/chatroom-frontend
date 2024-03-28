@@ -5,8 +5,10 @@ import { Button, Input, message } from "antd"
 import "./index.css"
 
 import { Constraints, IceConfiguration } from "../../common/constants"
-import { SignalingMessage, SignalingMessageType } from "../../utils/interface"
+import { MessageBody, SignalingMessage, SignalingMessageType } from "../../types/webrtc"
 import { emiter } from "../../common/constants"
+import TextMessageList from "../../component/TextMessageList"
+import MeetingInfo from "../../component/MeetingInfo"
 
 var ws: WebSocket
 let rtcPeerInstance: RtcPeer | undefined
@@ -16,6 +18,7 @@ function Chat() {
     const videoRef = useRef<HTMLVideoElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const otherVideoRef = useRef<HTMLVideoElement>(null)
+    const [messageDataList, setMessageDataList] = useState<Array<MessageBody>>([])
     // 设置定时器，每隔一段时间发送心跳包
     const heartbeatInterval = 3000; // 30秒
     var heartbeatTimer
@@ -32,7 +35,6 @@ function Chat() {
         let stream = await navigator.mediaDevices.getUserMedia(Constraints)
         const video = videoRef.current
         if (video) video.srcObject = stream;
-        // 视频截图
         if (otherVideoRef.current) {
             try {
                 stream.getTracks().forEach(track => {
@@ -49,7 +51,7 @@ function Chat() {
      * 处理answer的结果
      * @param res 
      */
-    const handleAnswerMsg = function (res: { data: string }) {
+    const handleAnswerMsg = function (res: MessageBody) {
         console.log("收到answer", res)
         if (rtcPeerInstance) rtcPeerInstance.setRemoteAnswer(JSON.parse(res.data) as RTCSessionDescriptionInit)
     }
@@ -58,14 +60,13 @@ function Chat() {
      * 处理offer信息
      * @param res 
      */
-    const handleOfferMsg = async function (res: { from: string; data: string; to: any }) {
+    const handleOfferMsg = async function (res: MessageBody) {
         console.log("收到offer", res)
         if (!rtcPeerInstance) {
             await initRtc(true)
         }
         remotePhone = res.from
-        //@ts-ignore
-        let answer = await rtcPeerInstance.getAnswer(JSON.parse(res.data))
+        let answer = await rtcPeerInstance?.getAnswer(JSON.parse(res.data))
         console.log(answer)
         let resData: SignalingMessage = {
             to: res.from || "",
@@ -80,7 +81,7 @@ function Chat() {
      * 处理candidate
      * @param res 
      */
-    const handleIceCnadidateMsg = async function (res: { data: string }) {
+    const handleIceCnadidateMsg = async function (res: MessageBody) {
         console.log("收到candidate", res)
         //@ts-ignore
         rtcPeerInstance && rtcPeerInstance.addOtherCandidate(JSON.parse(res.data))
@@ -104,13 +105,21 @@ function Chat() {
         sendMes({ type: SignalingMessageType.HangUP, to: remotePhone, from: phone, data: "" })
     }
 
+    /**
+     * 处理聊天文字信息
+     */
+    const handleTextMessage = async function (res: MessageBody) {
+        message.success(res.data)
+        setMessageDataList([...messageDataList,res])
+    }
+
     const initWs = async function () {
         ws = new WebSocket(`ws://118.89.199.105:8080/v1/api/chat?userNumber=${phone}`, [phone || ""]);
         ws.addEventListener('open', async function open() {
             console.log('Connected to the WebSocket server');
             message.success("login success")
             // 在连接建立后，可以发送数据
-             heartbeatTimer = setInterval(sendHeartbeat, heartbeatInterval);
+            heartbeatTimer = setInterval(sendHeartbeat, heartbeatInterval);
         });
 
         ws.addEventListener('message', async function incoming(data) {
@@ -131,6 +140,9 @@ function Chat() {
                 case SignalingMessageType.HangUP:
                     handleHangUp()
                     break
+                case SignalingMessageType.TextMessage:
+                    handleTextMessage(res)
+                    break
             }
 
         });
@@ -138,20 +150,23 @@ function Chat() {
         ws.addEventListener('close', function close() {
             ws.close()
             clearInterval(heartbeatInterval)
-            console.log('Disconnected from the WebSocket server');
+            message.error('Disconnected from the WebSocket server');
         });
 
     }
 
     const sendMes = function (data: any) {
-        if (ws) ws.send(JSON.stringify(data));
+        if (!ws) {
+            message.error("请登录后再发言!")
+            return
+        }
+        ws.send(JSON.stringify(data));
     }
     /**
      * 呼叫
      */
     const call = async function () {
         await initRtc(false)
-
     }
     /**
      * 截图
@@ -192,6 +207,14 @@ function Chat() {
     useEffect(() => {
         emiter.addListener("wsSendMes", (data: any) => {
             sendMes(data)
+        })
+        emiter.addListener("wsMessageText", (data: any) => {
+            sendMes({
+                from: phone,
+                to: remotePhone,
+                type: SignalingMessageType.TextMessage,
+                data: data
+            })
         })
         emiter.addListener("wsSendCandidate", (data: any) => {
             console.log("我发出的Candidate,", {
@@ -241,46 +264,93 @@ function Chat() {
     }, [])
     return (
         <>
-            <div className="chat-box">
-                <video
-                    ref={videoRef}
-                    autoPlay={true}
-                    id="localuser"
-                    className="local-user"
-                    playsInline>
-                </video>
-                <video
-                    ref={otherVideoRef}
-                    autoPlay={true}
-                    id="removeuser"
-                    className="remote-user"
-                    playsInline>
-                </video>
-                <div className="calling-tools">
 
-                    <svg className="icon hang-up" aria-hidden="true" onClick={() => { handleHangUp() }}>
-                        <use xlinkHref="#icon-guaduan"></use>
-                    </svg>
-                    <svg className="icon" aria-hidden="true" onClick={() => { capture() }}>
-                        <use xlinkHref="#icon-weibiaoti-1-12"></use>
-                    </svg>
+            <div className="chat-view">
+
+                <div className="video-space">
+                    <MeetingInfo></MeetingInfo>
+                    <div className="chat-box">
+                        <video
+                            ref={videoRef}
+                            autoPlay={true}
+                            id="localuser"
+                            className="local-user"
+                            playsInline>
+                        </video>
+                        <video
+                            ref={otherVideoRef}
+                            autoPlay={true}
+                            id="removeuser"
+                            className="remote-user"
+                            playsInline>
+                        </video>
+
+                    </div>
+                    <div className="calling-tools">
+                        <div className="calling-setting">
+                            <span className="icon-span" title="调节音量">
+                                <svg className="icon " aria-hidden="true" >
+                                    <use xlinkHref="#icon-xiaolaba"></use>
+                                </svg>
+                            </span>
+                            <span className="icon-span" title="录制视频">
+                                <svg className="icon " aria-hidden="true" >
+                                    <use xlinkHref="#icon-record-circle-fill"></use>
+                                </svg>
+                            </span>
+                        </div>
+                        <div className="split"></div>
+                        <div className="calling-action">
+                            <svg className="icon hang-up" aria-hidden="true" onClick={() => { handleHangUp() }}>
+                                <use xlinkHref="#icon-guaduan4"></use>
+                            </svg>
+
+
+                            <svg className="icon" aria-hidden="true" onClick={() => { capture() }}>
+                                <use xlinkHref="#icon-weibiaoti-1-12"></use>
+                            </svg>
+
+
+
+                        </div>
+                        <div className="split"></div>
+                        <div className="calling-setting">
+                            <span className="icon-span" title="白板">
+                                <svg className="icon " aria-hidden="true" >
+                                    <use xlinkHref="#icon-baiban"></use>
+                                </svg>
+                            </span>
+                            <span className="icon-span" title="共享屏幕">
+                                <svg className="icon " aria-hidden="true" >
+                                    <use xlinkHref="#icon-gongxiangpingmu1"></use>
+                                </svg>
+                            </span>
+                        </div>
+
+                    </div>
+                    <div className="tools">
+                        <div className="number">
+                            <Input className="number-input" placeholder="请输入你的电话号码" onChange={(event => phone = event.target.value)}></Input>
+                            <Button onClick={() => initWs()}>登录</Button>
+                        </div>
+                        <div className="number">
+                            <Input className="number-input" placeholder="请输入你想打的电话" onChange={(event => remotePhone = event.target.value)}></Input>
+                            <Button onClick={() => call()}>
+                                呼叫
+                            </Button>
+
+                        </div>
+
+
+                    </div>
+
+                </div>
+                <div className="message-space">
+                    <TextMessageList MessageList={messageDataList}></TextMessageList>
                 </div>
             </div>
-            <div className="tools">
-                <div className="number">
-                    <Input className="number-input" placeholder="请输入你的电话号码" onChange={(event => phone = event.target.value)}></Input>
-                    <Button onClick={() => initWs()}>登录</Button>
-                </div>
-                <div className="number">
-                    <Input className="number-input" placeholder="请输入你想打的电话" onChange={(event => remotePhone = event.target.value)}></Input>
-                    <Button onClick={() => call()}>
-                        呼叫
-                    </Button>
-
-                </div>
 
 
-            </div>
             <canvas ref={canvasRef}>
 
             </canvas>

@@ -143,7 +143,12 @@ export default class RtcPeer {
 
     addCacheCancidate() {
         this.cacheIceCandidates.forEach(async candidate => {
-            if (this.rtcPeerConnect)  this.rtcPeerConnect.addIceCandidate(candidate);
+            try {
+               await this.rtcPeerConnect?.addIceCandidate(candidate);
+            } catch (error) {
+                console.log(error)
+            }
+
         })
     }
 

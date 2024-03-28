@@ -1,5 +1,5 @@
 import { emiter, IceConfiguration } from "../common/constants";
-import { SignalingMessage, SignalingMessageType } from "./interface";
+import { SignalingMessage,SignalingMessageType } from "../types/webrtc";
 import RtcPeer from "./RtcPeer";
 
 class WebSocketClient {
@@ -16,9 +16,7 @@ class WebSocketClient {
     }
 
     private sendHeartbeat() {
-        if (this.ws) {
-            this.ws.send(JSON.stringify({ type: "HEART_BEAT", From: this.phone }));
-        }
+        this.ws?.send(JSON.stringify({ type: "HEART_BEAT", From: this.phone }));
     }
 
     private handleAnswerMsg(res: { data: string }) {
@@ -94,15 +92,14 @@ class WebSocketClient {
     }
 
     public sendMes(data: any) {
-       
-            this.ws?.send(JSON.stringify(data));
-        
+        this.ws?.send(JSON.stringify(data));
+
     }
 
     public close() {
-            this.ws?.close();
-            this.ws = null;
-        
+        this.ws?.close();
+        this.ws = null;
+
     }
 }
 

@@ -1,0 +1,8 @@
+.meeting-info{
+    margin: 10px auto;
+}
+.meeting-time{
+    font-size: x-small;
+    margin-bottom: 1em;
+    color: var(--time-color);
+}

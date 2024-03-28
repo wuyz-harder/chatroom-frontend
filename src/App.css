@@ -1,5 +1,7 @@
 .App {
-  text-align: center;
+  background: var(--app-bg-color);
+  height: 100vh;
+  color: #ffffff;
 }
 
 .App-logo {
@@ -32,6 +34,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -39,9 +42,9 @@
 
 
 .icon {
-  width: 2em; 
-  height: 2em;
-  vertical-align: -0.15em;
+  width: 1em;
+  height: 1em;
+  
   fill: currentColor;
   overflow: hidden;
   cursor: pointer;

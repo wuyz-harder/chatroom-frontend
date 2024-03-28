@@ -42,6 +42,7 @@
     ]
   },
   "devDependencies": {
-    "antd": "^5.15.3"
+    "antd": "^5.15.3",
+    "react-infinite-scroll-component": "^6.1.0"
   }
 }

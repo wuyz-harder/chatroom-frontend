@@ -1,0 +1,41 @@
+.message-list-header{
+    border-bottom: 1px solid var(--app-bg-color);
+    padding-bottom: 18px;
+}
+.message-list-footer{
+    background: var(--app-bg-color);
+    border-radius: 5px;
+}
+.message-list-footer input{
+    color:white !important;
+    background: var(--app-bg-color);
+    border: none;
+}
+.message-list-footer input::placeholder{
+    color:grey;
+}
+.message-list-footer  :where(.css-dev-only-do-not-override-djtmh8).ant-input-affix-wrapper{
+    background: var(--app-bg-color);
+    border: none;
+   
+}
+.message-list-footer input:hover{
+    background: none;
+    border: none;
+}
+.message-list-footer input:focus{
+    background: none;
+    border: none;
+}
+
+.message-body{
+    height: 80%;
+    overflow: scroll;
+}
+.send-icon{
+    color: #b6bdc7;
+}
+.upload-img-icon{
+    font-size: 2.1em;
+    color: #b6bdc7;
+}
