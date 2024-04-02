@@ -28,7 +28,7 @@
     border: none;
 }
 
-.message-body{
+.message-list-body{
     height: 80%;
     overflow: scroll;
 }
@@ -39,3 +39,70 @@
     font-size: 2.1em;
     color: #b6bdc7;
 }
+
+
+/* 聊天框 */
+/* 聊天消息框样式 */
+.message-box {
+    max-width: 400px;
+    
+    padding: 5px;
+    border-radius: 10px;
+    display: flex; 
+    overflow-y: auto; /* 添加滚动条 */
+  }
+  .message-detail{
+    margin-left: .5em;
+  }
+.message-reverse{
+    flex-direction: row-reverse;
+}
+
+  
+  /* 用户名字样式 */
+  .username {
+    font-weight: bold;
+    margin-bottom: 5px;
+    padding-left: 10px;
+    color: #ffffff;
+  }
+  .username-text-align{
+    text-align: end;
+    margin-right: .5em;
+  }
+
+  
+  
+  /* 用户消息样式 */
+  .user-message {
+    max-width: 90%;
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    word-wrap: break-word;
+    border-radius: 10px 0 10px 5px;
+    background-color: #1278e4;
+    color: #fff;
+    clear: both;
+    float: right;
+  }
+  
+  /* 对方消息样式 */
+  .other-message {
+    max-width: 70%;
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    border-radius: 0 10px 5px 10px;
+    background-color: #ffffff;
+    color: #333;
+    clear: both;
+    float: left;
+  }
+  
+  /* 时间戳样式 */
+  .timestamp {
+    display: block;
+    font-size: 12px;
+    color: #999;
+    margin-top: 5px;
+    clear: both;
+  }

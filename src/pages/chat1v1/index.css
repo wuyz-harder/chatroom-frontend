@@ -34,6 +34,7 @@ canvas{
 }
 .message-space{
     width: 28%;
+    height: 80vh;
     padding: 18px 9px;
     border-radius: 8px;
     background: var(--area-bg-color);
@@ -63,6 +64,7 @@ video.local-user {
 span.icon-span {
     background: var(--app-bg-color);
     padding: 7px;
+    position: relative;
     cursor: pointer;
     margin-right: 1em;
     border-radius: 4px;
@@ -119,4 +121,28 @@ span.icon-span {
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+.adjust-voice{
+    position: absolute;
+    top: -95px;
+    left: 2px;
+    height: 10vh;
+}
+/* 录制灯 */
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+.recording {
+    animation: blink 1s infinite;
+}
+/* 音量条背景 */
+:where(.css-dev-only-do-not-override-djtmh8).ant-slider-vertical .ant-slider-rail{
+    background: white;
+}
+:where(.css-dev-only-do-not-override-djtmh8).ant-slider:hover .ant-slider-rail{
+    background: white;
 }

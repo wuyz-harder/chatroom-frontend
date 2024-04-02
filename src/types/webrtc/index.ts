@@ -3,7 +3,11 @@ export enum SignalingMessageType {
     Answer = "answer",
     Candidate = "candidate",
     HangUP = "hangup",
+   
     Create = "create",
+    Call = "call",
+    Reject = "reject",
+	Accept  = "accept",
     Join = "join",
     Leave = "leave",
     TextMessage = "textMessage",
@@ -22,5 +26,6 @@ export type MessageBody = {
     from: string;
     data: string;
     to: string;
-    type:string
+    type:string;
+    other?:boolean
 }

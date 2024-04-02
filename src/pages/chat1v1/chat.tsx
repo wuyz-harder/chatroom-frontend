@@ -1,7 +1,7 @@
-import React, { useRef } from "react"
+import React, { useCallback, useRef } from "react"
 import { useState, useEffect } from "react"
 import RtcPeer from "../../utils/RtcPeer"
-import { Button, Input, message } from "antd"
+import { Button, Input, Slider, message } from "antd"
 import "./index.css"
 
 import { Constraints, IceConfiguration } from "../../common/constants"
@@ -9,29 +9,45 @@ import { MessageBody, SignalingMessage, SignalingMessageType } from "../../types
 import { emiter } from "../../common/constants"
 import TextMessageList from "../../component/TextMessageList"
 import MeetingInfo from "../../component/MeetingInfo"
+import CallTip from "../../component/callTips"
+import { scrollToBottom } from "../../utils/Function"
+import Whiteboard from "../../component/whiteboard"
 
-var ws: WebSocket
+let ws: WebSocket
 let rtcPeerInstance: RtcPeer | undefined
 let phone: string, remotePhone: string
+let nowCallingNumber: any
+let mediaRecorder: MediaRecorder;
+let recordedChunks: BlobPart[] | undefined = [];
+
+
 
 function Chat() {
     const videoRef = useRef<HTMLVideoElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const otherVideoRef = useRef<HTMLVideoElement>(null)
     const [messageDataList, setMessageDataList] = useState<Array<MessageBody>>([])
+    const [callingNumber, setCallingNumber] = useState("")
+    const [display, setDisplay] = useState(false)
+    const [volumeDisplay, setVolumeDisplay] = useState(false)
+    const [volumeValue, setVolumeValue] = useState(0)
+    const [recording, setRecording] = useState(false)
+    
+    let calling: boolean = false
     // 设置定时器，每隔一段时间发送心跳包
     const heartbeatInterval = 3000; // 30秒
     var heartbeatTimer
 
-
     // 发送心跳包
     function sendHeartbeat() {
-        ws.send(JSON.stringify({ type: "HEART_BEAT", From: phone }));
+        if (ws) ws.send(JSON.stringify({ type: "HEART_BEAT", From: phone }));
     }
 
     const initRtc = async function (remote: boolean) {
         console.log("init----->")
         rtcPeerInstance = new RtcPeer(IceConfiguration, remote)
+       
+
         let stream = await navigator.mediaDevices.getUserMedia(Constraints)
         const video = videoRef.current
         if (video) video.srcObject = stream;
@@ -45,6 +61,7 @@ function Chat() {
                 console.log("init media err:", err);
             }
         }
+
     }
 
     /**
@@ -61,13 +78,12 @@ function Chat() {
      * @param res 
      */
     const handleOfferMsg = async function (res: MessageBody) {
-        console.log("收到offer", res)
         if (!rtcPeerInstance) {
             await initRtc(true)
         }
         remotePhone = res.from
         let answer = await rtcPeerInstance?.getAnswer(JSON.parse(res.data))
-        console.log(answer)
+
         let resData: SignalingMessage = {
             to: res.from || "",
             from: res.to || "",
@@ -110,8 +126,74 @@ function Chat() {
      */
     const handleTextMessage = async function (res: MessageBody) {
         message.success(res.data)
-        setMessageDataList([...messageDataList,res])
+        res.other = res.from == phone ? false : true
+        setMessageDataList(messageDataList => [...messageDataList, res]);
+        scrollToBottom("message-list-body")
     }
+    /**
+     * 
+     * @param res 发送拒绝通话
+     */
+    const sendReject = function () {
+        setDisplay(false)
+        sendMes({
+            from: phone,
+            to: nowCallingNumber,
+            type: SignalingMessageType.Reject
+        })
+    }
+    /**
+    * 
+    * @param res 发送 --》 接受通话
+    */
+    const sendAccept = function () {
+        setDisplay(false)
+        calling = true
+        sendMes({
+            from: phone,
+            to: nowCallingNumber,
+            type: SignalingMessageType.Accept
+        })
+    }
+    /**
+     * 处理电话邀约
+     * @param res 
+     */
+    const handleCallRequest = async function (res: MessageBody) {
+        nowCallingNumber = res.from
+        // 如果通话中的话就拒绝
+        if (calling) {
+            sendReject()
+            return
+        }
+        console.log("有人邀约", res)
+        setCallingNumber(res.from)
+        setDisplay(true)
+    }
+
+    /**
+     * 处理电话通过邀约，肯定是邀请方，本地方
+     * @param res 
+     */
+    const handleAcceptRequest = async function (res: MessageBody) {
+        // 如果通话中的话就拒绝
+        await initRtc(false)
+        calling = true
+    }
+
+    /**
+     * 处理拒绝
+     * @param res 
+     */
+    const handleReject = async function () {
+        // 如果通话中的话就拒绝
+        calling = false
+        message.error("对方拒绝了你的通话申请")
+    }
+
+
+
+
 
     const initWs = async function () {
         ws = new WebSocket(`ws://118.89.199.105:8080/v1/api/chat?userNumber=${phone}`, [phone || ""]);
@@ -143,6 +225,15 @@ function Chat() {
                 case SignalingMessageType.TextMessage:
                     handleTextMessage(res)
                     break
+                case SignalingMessageType.Call:
+                    handleCallRequest(res)
+                    break
+                case SignalingMessageType.Accept:
+                    handleAcceptRequest(res)
+                    break
+                case SignalingMessageType.Reject:
+                    handleReject()
+                    break
             }
 
         });
@@ -166,7 +257,16 @@ function Chat() {
      * 呼叫
      */
     const call = async function () {
-        await initRtc(false)
+        if (!phone || !remotePhone) {
+            message.error("请先输入您或者对方号码")
+            return
+        }
+        sendMes({
+            type: SignalingMessageType.Call,
+            from: phone,
+            to: remotePhone
+        })
+        // await initRtc(false)
     }
     /**
      * 截图
@@ -174,7 +274,7 @@ function Chat() {
     const capture = function () {
         // 等待视频加载
         // 创建Canvas元素
-
+       
         const ctx = canvasRef?.current?.getContext('2d');
 
         if (canvasRef.current) {
@@ -203,70 +303,124 @@ function Chat() {
 
     }
 
+    /**
+     * 发送消息
+     */
+    const wsMessageText = useCallback((data: string) => {
+        sendMes({
+            from: phone,
+            to: remotePhone,
+            type: SignalingMessageType.TextMessage,
+            data: data
+        })
+    }, [])
 
-    useEffect(() => {
-        emiter.addListener("wsSendMes", (data: any) => {
-            sendMes(data)
-        })
-        emiter.addListener("wsMessageText", (data: any) => {
-            sendMes({
-                from: phone,
-                to: remotePhone,
-                type: SignalingMessageType.TextMessage,
-                data: data
-            })
-        })
-        emiter.addListener("wsSendCandidate", (data: any) => {
-            console.log("我发出的Candidate,", {
-                from: phone,
-                type: SignalingMessageType.Candidate,
-                to: remotePhone,
-                data: JSON.stringify(data.data)
-            })
-            sendMes({
-                from: phone,
-                type: SignalingMessageType.Candidate,
-                to: remotePhone,
-                data: JSON.stringify(data.data)
-            })
-        })
-        emiter.addListener("wsSendOffer", (data: any) => {
-            console.log(phone, remotePhone)
-            sendMes({
-                from: phone,
-                type: SignalingMessageType.Offer,
-                to: remotePhone,
-                data: JSON.stringify(data.data)
-            })
-        })
+    /**
+     * 统一处理
+     * @param data 触发的事件
+     */
+    const resolveEmitEvent = function (data: { type: string, data: any }) {
+        switch (data.type) {
+            case "wsSendCandidate":
 
-        return () => {
-            emiter.removeListener("wsSendMes", (data: any) => {
-                sendMes(data)
-            });
-            emiter.removeListener("wsSendCandidate", (data: any) => {
                 sendMes({
                     from: phone,
                     type: SignalingMessageType.Candidate,
                     to: remotePhone,
                     data: JSON.stringify(data.data)
                 })
-            })
-            emiter.removeListener("wsSendOffer", (data: any) => {
+                break
+            case "wsSendOffer":
                 sendMes({
                     from: phone,
                     type: SignalingMessageType.Offer,
                     to: remotePhone,
                     data: JSON.stringify(data.data)
                 })
+                break
+            case "accept":
+                sendAccept()
+                break
+            case "reject":
+                sendReject()
+                break
+        }
+
+    }
+
+    const openAdjustVol = function () {
+        setVolumeDisplay(!volumeDisplay)
+        if (videoRef.current && videoRef.current.volume) {
+            setVolumeValue(Math.floor(videoRef.current.volume * 100))
+        } else {
+            message.info("打通电话后可设置")
+        }
+    }
+
+    /**
+     * 调节音量
+     * @param value 
+     */
+    const adjustVol = function (value: number) {
+        //@ts-ignore
+        if (videoRef.current) {
+
+            videoRef.current.volume = value / 100
+        }
+        setVolumeDisplay(false)
+    }
+    /**
+     * 录制视频
+     */
+    const record = function () {
+        if (recording) {
+            // 保存视频
+            mediaRecorder.stop();
+        } else {
+            // 开始录制
+            let stream = videoRef.current?.srcObject
+            mediaRecorder = new MediaRecorder(stream as any);
+
+            // 当有新的数据可用时触发
+            mediaRecorder.ondataavailable = event => {
+                recordedChunks?.push(event.data);
+            };
+
+            // 当录制完成时触发
+            mediaRecorder.onstop = () => {
+                // 创建一个 Blob 对象并生成一个 URL
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                let downloadLink = document.createElement("a")
+                // 设置下载链接并显示
+                downloadLink.href = url;
+                downloadLink.download = 'recording.webm';
+                downloadLink.style.display = 'block';
+                downloadLink.click()
+                // 重置录制数据
+                recordedChunks = [];
+            };
+
+            // 开始录制
+            mediaRecorder.start();
+        }
+        setRecording(!recording)
+    }
+
+    useEffect(() => {
+        emiter.addListener("aboutMessage", (data: { type: string, data: any }) => {
+            resolveEmitEvent(data)
+        })
+        return () => {
+            emiter.removeListener("aboutMessage", (data: { type: string, data: any }) => {
+                resolveEmitEvent(data)
             })
         };
     }, [])
     return (
         <>
-
+            <CallTip number={callingNumber} display={display}></CallTip>
             <div className="chat-view">
-
                 <div className="video-space">
                     <MeetingInfo></MeetingInfo>
                     <div className="chat-box">
@@ -288,14 +442,22 @@ function Chat() {
                     </div>
                     <div className="calling-tools">
                         <div className="calling-setting">
-                            <span className="icon-span" title="调节音量">
-                                <svg className="icon " aria-hidden="true" >
+                            <span className="icon-span" title="调节音量" onClick={() => openAdjustVol()}>
+                                <Slider
+                                    vertical
+                                    defaultValue={volumeValue}
+                                    className={volumeDisplay ? "adjust-voice" : "adjust-voice disappear"}
+                                    onChangeComplete={value => adjustVol(value)} />
+                                <svg className="icon" aria-hidden="true" >
                                     <use xlinkHref="#icon-xiaolaba"></use>
                                 </svg>
                             </span>
-                            <span className="icon-span" title="录制视频">
-                                <svg className="icon " aria-hidden="true" >
-                                    <use xlinkHref="#icon-record-circle-fill"></use>
+                            <span className="icon-span" title="录制视频" onClick={() => { record() }}>
+                                <svg className="icon" aria-hidden="true" >
+                                    {
+                                        recording ? <use xlinkHref="#icon-luzhizhong" className="recording"></use> : <use xlinkHref="#icon-record-circle-fill"></use>
+                                    }
+
                                 </svg>
                             </span>
                         </div>
@@ -309,8 +471,6 @@ function Chat() {
                             <svg className="icon" aria-hidden="true" onClick={() => { capture() }}>
                                 <use xlinkHref="#icon-weibiaoti-1-12"></use>
                             </svg>
-
-
 
                         </div>
                         <div className="split"></div>
@@ -346,16 +506,13 @@ function Chat() {
 
                 </div>
                 <div className="message-space">
-                    <TextMessageList MessageList={messageDataList}></TextMessageList>
+                    <TextMessageList MessageList={messageDataList} wsMessageText={wsMessageText}></TextMessageList>
+
                 </div>
             </div>
-
-
-            <canvas ref={canvasRef}>
-
-            </canvas>
+            <canvas ref={canvasRef}></canvas>
+            {/* <Whiteboard DataChannel={dataChannel} imageData={wbImageData}></Whiteboard> */}
         </>
-
     )
 }
 export default Chat

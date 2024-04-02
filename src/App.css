@@ -1,5 +1,5 @@
 .App {
-  background: var(--app-bg-color);
+  background: var(--app-bg-color) !important;
   height: 100vh;
   color: #ffffff;
 }
@@ -42,10 +42,13 @@
 
 
 .icon {
-  width: 1em;
-  height: 1em;
+  width: 1.5em;
+  height: 1.5em;
   
   fill: currentColor;
   overflow: hidden;
   cursor: pointer;
+}
+.disappear{
+  display: none;
 }

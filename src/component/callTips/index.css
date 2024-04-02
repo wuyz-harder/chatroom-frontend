@@ -1,0 +1,9 @@
+.call-tip{
+    position: absolute;
+    z-index: 2;
+    right: 10px;
+    top: 20px;
+}
+.call-tip-icon{
+    margin: auto 8px;
+}

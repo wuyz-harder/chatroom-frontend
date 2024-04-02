@@ -1,0 +1,8 @@
+.white-board{
+    display: block;
+    background-color: white;
+    max-width: 100%;
+}
+.white-board-box{
+    background: var(--app-bg-color);
+}

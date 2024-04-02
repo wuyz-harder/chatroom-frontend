@@ -29,7 +29,7 @@ export default class RtcPeer {
         // 把流加到RTCPeerConnection里面对方才有可能收到
 
         this.rtcPeerConnect.addEventListener("track", event => {
-            console.log("我收到",event)
+            console.log("我收到", event)
             if (event.streams && event.streams.length > 0) {
                 //@ts-ignore
                 document.getElementById("removeuser").srcObject = event.streams[0];
@@ -50,12 +50,13 @@ export default class RtcPeer {
             this.handleNegotiationNeededEvent(remote)
         })
         this.rtcPeerConnect.addEventListener("icecandidate", (event) => {
-            if (event.candidate) {
-                emiter.emit("wsSendCandidate", {
-                    data: JSON.stringify(event.candidate)
-                })
 
-            }
+            emiter.emit("aboutMessage", {
+                type: "wsSendCandidate",
+                data: JSON.stringify(event.candidate)
+            })
+
+
         })
 
 
@@ -85,7 +86,10 @@ export default class RtcPeer {
 
                 // Send the offer to the remote peer.
                 console.log("---> Sending the offer to the remote peer");
-                emiter.emit("wsSendOffer", { data: JSON.stringify(this.rtcPeerConnect.localDescription) })
+                emiter.emit("aboutMessage", {
+                    type: "wsSendOffer",
+                    data: JSON.stringify(this.rtcPeerConnect.localDescription)
+                })
 
             } catch (err) {
                 console.log("*** The following error occurred while handling the negotiationneeded event:");
@@ -122,6 +126,7 @@ export default class RtcPeer {
 
                 break;
         }
+
     }
 
 
@@ -144,7 +149,7 @@ export default class RtcPeer {
     addCacheCancidate() {
         this.cacheIceCandidates.forEach(async candidate => {
             try {
-               await this.rtcPeerConnect?.addIceCandidate(candidate);
+                await this.rtcPeerConnect?.addIceCandidate(candidate);
             } catch (error) {
                 console.log(error)
             }
@@ -156,13 +161,13 @@ export default class RtcPeer {
     async addOtherCandidate(candidate: any) {
         candidate = JSON.parse(candidate);
         if (this.rtcPeerConnect) {
-           
+
             console.log("remotesdp", this.rtcPeerConnect.remoteDescription)
             // 如果已经设置了远程描述，则立即添加 ICE 候选人
-            try{
+            try {
                 this.rtcPeerConnect.addIceCandidate(candidate);
-            }catch(err){
-                console.error("addIceError",err)
+            } catch (err) {
+                console.error("addIceError", err)
             }
 
         }
@@ -174,7 +179,7 @@ export default class RtcPeer {
     close() {
         if (this.rtcPeerConnect) {
             this.rtcPeerConnect.close()
-            
+
         }
     }
 
