@@ -191,10 +191,9 @@ function Chat() {
         message.error("对方拒绝了你的通话申请")
     }
 
-
-
-
-
+    /**
+     * 初始化ws链接
+     */
     const initWs = async function () {
         ws = new WebSocket(`ws://118.89.199.105:8080/v1/api/chat?userNumber=${phone}`, [phone || ""]);
         ws.addEventListener('open', async function open() {
@@ -234,6 +233,9 @@ function Chat() {
                 case SignalingMessageType.Reject:
                     handleReject()
                     break
+                case SignalingMessageType.Error:
+                    message.error(res.msg)
+                    break
             }
 
         });
@@ -245,7 +247,11 @@ function Chat() {
         });
 
     }
-
+    /**
+     * 
+     * @param data 发送消息
+     * @returns 
+     */
     const sendMes = function (data: any) {
         if (!ws) {
             message.error("请登录后再发言!")
@@ -322,7 +328,6 @@ function Chat() {
     const resolveEmitEvent = function (data: { type: string, data: any }) {
         switch (data.type) {
             case "wsSendCandidate":
-
                 sendMes({
                     from: phone,
                     type: SignalingMessageType.Candidate,

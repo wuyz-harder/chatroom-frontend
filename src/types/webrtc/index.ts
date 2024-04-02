@@ -10,6 +10,7 @@ export enum SignalingMessageType {
 	Accept  = "accept",
     Join = "join",
     Leave = "leave",
+    Error = "error",
     TextMessage = "textMessage",
     OfferRenegotiation = "offerRenegotiation"
 }
